@@ -1,0 +1,2 @@
+const SUPABASE_URL = 'https://suuatimgfcpbpermxrbg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1dWF0aW1nZmNwYnBlcm14cmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3OTA1MTcsImV4cCI6MjEwMTM2NjUxN30.QE0cQ6MjBd_8gQLctYjZESZvzD1hy8Inc8636W73CHQ';

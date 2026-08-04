@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pilkasis Admin | SMAN 2 Kuningan</title>
+    <style>
+        html, body {
+            background-color: #eef2f5 !important;
+            margin: 0;
+            min-height: 100%;
+            min-height: 100dvh;
+        }
+    </style>
+    <script>
+
+        (function () {
+            var LOGIN = 'index.html';
+            var MAX_AGE_MS = 12 * 60 * 60 * 1000;
+            try {
+                var raw = localStorage.getItem('adminSession');
+                if (!raw) {
+                    window.location.replace(LOGIN);
+                    return;
+                }
+                var session = JSON.parse(raw);
+                if (!session || typeof session !== 'object' || !session.user || !session.token) {
+                    localStorage.removeItem('adminSession');
+                    window.location.replace(LOGIN);
+                    return;
+                }
+                var ts = Number(session.ts);
+                if (!session.ts || isNaN(ts) || (Date.now() - ts > MAX_AGE_MS)) {
+                    localStorage.removeItem('adminSession');
+                    window.location.replace(LOGIN);
+                    return;
+                }
+            } catch (e) {
+                try { localStorage.removeItem('adminSession'); } catch (err) { }
+                window.location.replace(LOGIN);
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link id="appFavicon" rel="icon" type="image/png" href="https://iili.io/B5MMKiX.png">
+</head>
+
+<body class="bg-[#eef2f5] h-screen supports-[height:100dvh]:h-[100dvh] overflow-hidden flex flex-col">
+    <div id="adminView" class="flex h-full w-full">
+
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+        <aside id="sidebar"
+            class="hidden lg:flex animate-theme-blink text-[#d0dfed] flex-col h-full flex-shrink-0 z-20 shadow-lg border-r border-white/5 w-auto min-w-[70px]">
+            <div
+                class="logo-area h-[clamp(45px,8vw,60px)] bg-gradient-animated flex relative items-center pl-3 md:pl-6 pr-8 md:pr-12 text-white font-bold text-[clamp(14px,3vw,18px)] justify-start cursor-pointer">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-vote-yea logo-icon"></i>
+                    <span class="logo-text text-gradient-animated">Pilkasis</span>
+                </div>
+                <i id="sidebarToggle"
+                    class="fas fa-arrow-left text-sm p-2 rounded-full hover:bg-white/20 transition-all hover:scale-110"></i>
+            </div>
+            <div class="flex-1 overflow-y-auto sidebar-scroll py-4 text-sm font-medium">
+                <div
+                    class="section-header px-6 py-2 mb-1 text-xs font-semibold text-[#8eb0d4] uppercase tracking-wider">
+                    Menu Utama</div>
+                <a href="#" onclick="event.preventDefault(); switchView('dashboard')" id="nav-dashboard"
+                    class="flex items-center px-3 py-2.5 mx-3 mb-1 bg-white/20 text-white rounded-md border border-white/30 shadow-md transition-all">
+                    <i class="fas fa-th-large w-6 text-center text-[#38bdf8]"></i>
+                    <span class="ml-2 menu-text font-bold">Dashboard</span>
+                </a>
+                <div class="flex flex-col">
+                    <a href="#" onclick="event.preventDefault(); toggleHtmlDropdown(event)" id="nav-pemilih"
+                        class="sidebar-menu-link group flex items-center justify-between px-3 py-2.5 mx-3 mb-1 rounded-md text-[#b5cbdf] hover:text-white">
+                        <div class="flex items-center">
+                            <i
+                                class="fas fa-users w-6 text-center text-[#9db9d8] group-hover:text-white transition-colors"></i>
+                            <span class="ml-2 menu-text">Data Pemilih</span>
+                        </div>
+                        <span class="menu-arrow ml-auto"><i
+                                class="fas fa-chevron-down text-xs transition-transform duration-300"></i></span>
+                    </a>
+                    <div id="pemilih-submenu-html"
+                        class="hidden flex-col bg-black/20 mx-3 rounded-md mb-2 overflow-hidden py-1">
+                        <a href="#" onclick="event.preventDefault(); switchViewHtml('pemilih-siswa')"
+                            id="nav-pemilih-siswa"
+                            class="group flex items-center pl-8 pr-3 py-2 text-xs text-[#b5cbdf] hover:text-white transition-all">
+                            <i
+                                class="fas fa-user-graduate w-4 text-center text-[#9db9d8] group-hover:text-[#38bdf8] transition-colors"></i>
+                            <span
+                                class="ml-2 border-b border-transparent group-hover:border-[#38bdf8] pb-0.5 transition-colors menu-text">Data
+                                Siswa</span>
+                        </a>
+                        <a href="#" onclick="event.preventDefault(); switchViewHtml('pemilih-guru')"
+                            id="nav-pemilih-guru"
+                            class="group flex items-center pl-8 pr-3 py-2 text-xs text-[#b5cbdf] hover:text-white transition-all">
+                            <i
+                                class="fas fa-chalkboard-teacher w-4 text-center text-[#9db9d8] group-hover:text-[#38bdf8] transition-colors"></i>
+                            <span
+                                class="ml-2 border-b border-transparent group-hover:border-[#38bdf8] pb-0.5 transition-colors menu-text">Data
+                                Guru</span>
+                        </a>
+                        <a href="#" onclick="event.preventDefault(); switchViewHtml('pemilih-staf')"
+                            id="nav-pemilih-staf"
+                            class="group flex items-center pl-8 pr-3 py-2 text-xs text-[#b5cbdf] hover:text-white transition-all">
+                            <i
+                                class="fas fa-user-cog w-4 text-center text-[#9db9d8] group-hover:text-[#38bdf8] transition-colors"></i>
+                            <span
+                                class="ml-2 border-b border-transparent group-hover:border-[#38bdf8] pb-0.5 transition-colors menu-text">Data
+                                Staf</span>
+                        </a>
+                    </div>
+                </div>
+                <a href="#" onclick="event.preventDefault(); switchView('kandidat')" id="nav-kandidat"
+                    class="sidebar-menu-link group flex items-center px-3 py-2.5 mx-3 mb-1 rounded-md text-[#b5cbdf] hover:text-white">
+                    <i
+                        class="fas fa-user-tie w-6 text-center text-[#9db9d8] group-hover:text-white transition-colors"></i>
+                    <span class="ml-2 menu-text">Data Kandidat</span>
+                </a>
+                <a href="#" onclick="event.preventDefault(); switchView('admin')" id="nav-admin"
+                    class="sidebar-menu-link group flex items-center px-3 py-2.5 mx-3 mb-1 rounded-md text-[#b5cbdf] hover:text-white">
+                    <i
+                        class="fas fa-user-shield w-6 text-center text-[#9db9d8] group-hover:text-white transition-colors"></i>
+                    <span class="ml-2 menu-text">Data Admin</span>
+                </a>
+                <div
+                    class="section-header px-6 py-2 mt-4 mb-1 text-xs font-semibold text-[#8eb0d4] uppercase tracking-wider">
+                    Sistem</div>
+                <a href="#" onclick="event.preventDefault(); switchView('jadwal')" id="nav-jadwal"
+                    class="sidebar-menu-link group flex items-center px-3 py-2.5 mx-3 mb-1 rounded-md text-[#b5cbdf] hover:text-white">
+                    <i
+                        class="fas fa-calendar-alt w-6 text-center text-[#9db9d8] group-hover:text-white transition-colors"></i>
+                    <span class="ml-2 menu-text">Jadwal</span>
+                </a>
+                <a href="#" onclick="event.preventDefault(); switchView('pengaturan')" id="nav-pengaturan"
+                    class="sidebar-menu-link group flex items-center px-3 py-2.5 mx-3 mb-2 rounded-md text-[#b5cbdf] hover:text-white">
+                    <i class="fas fa-cogs w-6 text-center text-[#9db9d8] group-hover:text-white transition-colors"></i>
+                    <span class="ml-2 menu-text">Pengaturan</span>
+                </a>
+            </div>
+            <div class="flex-shrink-0 border-t border-white/10 py-3 mt-auto">
+                <a href="#" class="btnLogout sidebar-menu-link group flex items-center px-3 py-2.5 mx-3 rounded-md text-rose-300 hover:text-white"
+                    title="Keluar">
+                    <i class="fas fa-sign-out-alt w-6 text-center text-rose-400 group-hover:text-white transition-colors"></i>
+                    <span class="ml-2 menu-text font-semibold">Keluar</span>
+                </a>
+            </div>
+        </aside>
+        <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-[#eef2f5] w-full">
+            <header
+                class="h-[clamp(45px,8vw,60px)] animate-theme-blink flex-shrink-0 flex items-center justify-between px-2 sm:px-3 md:px-4 text-white z-10 shadow-md border-b border-white/10">
+
+                <button id="mobileMenuToggle" class="lg:hidden text-white hover:text-sky-300 text-lg mr-2 p-1 focus:outline-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="flex-1 min-w-0 flex items-center gap-2 md:gap-3 mr-2 md:mr-4">
+                    <img id="headerLogo" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Logo"
+                        class="w-[clamp(24px,5vw,36px)] h-[clamp(24px,5vw,36px)] object-contain flex-shrink-0 logo-blend">
+                    <div class="flex flex-col justify-center overflow-hidden pb-1 min-w-0">
+                        <span
+                            class="text-[clamp(12px,2.2vw,24px)] tracking-wide truncate leading-normal global-school-name line-clamp-1"
+                            style="font-family: 'Poppins', sans-serif; font-weight: 700; text-shadow: 0px 1px 3px rgba(0,0,0,0.4);">SMA Negeri 2 Kuningan</span>
+                        <span id="headerExamTitle"
+                            class="text-[clamp(9px,1.5vw,14px)] text-amber-400 font-bold tracking-wider leading-none truncate line-clamp-1">Pilkasis OSIS & DPK 2026</span>
+                    </div>
+                </div>
+                <div class="flex items-center pr-1 flex-shrink-0 gap-2 md:gap-4 relative" id="headerProfileContainer">
+                    <div class="flex items-center gap-2 pr-2 md:pr-4 cursor-pointer" onclick="toggleProfileDropdown()">
+                        <div class="flex flex-col text-right min-w-0">
+                            <span id="headerAdminName"
+                                class="text-[clamp(11px,1.5vw,15px)] font-bold leading-tight animate-bg-text truncate">Admin</span>
+                        </div>
+                        <div class="flex items-center gap-1 text-white/90 hover:text-white transition-colors flex-shrink-0">
+                            <i class="fas fa-user-circle text-[clamp(20px,3vw,32px)]"></i>
+                            <i class="fas fa-caret-down text-[clamp(8px,2vw,11px)] opacity-70"></i>
+                        </div>
+                    </div>
+
+                    <div id="profileDropdown"
+                        class="hidden absolute top-full right-0 mt-2 w-40 max-w-none bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5">
+                        <button type="button" onclick="openAdminProfileModal(); toggleProfileDropdown();"
+                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                            <i class="fas fa-user-edit w-4 text-center text-sky-600"></i> Ganti Password
+                        </button>
+                        <button type="button"
+                            class="btnLogout w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                            <i class="fas fa-sign-out-alt w-4 text-center"></i> Keluar
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <div class="flex-1 overflow-y-auto custom-scroll p-2 sm:p-3 md:p-5 pb-[clamp(80px,20vh,120px)] md:pb-16 view-content-wrapper">
+                <div id="view-dashboard" class="view-content block">
+                    <div
+                        class="bg-[#5b7a97] text-white p-2 sm:p-3 md:p-4 rounded shadow-sm mb-3 sm:mb-4 md:mb-5 flex items-start gap-2 sm:gap-3 md:gap-4 shadow-md">
+                        <i class="fas fa-shield-halved text-[clamp(20px,3.5vw,36px)] opacity-80 mt-1 flex-shrink-0"></i>
+                        <div class="min-w-0">
+                            <h2 class="text-[clamp(14px,2.5vw,24px)] font-bold leading-tight mb-1">Selamat Datang di Dasbor Pengawas</h2>
+                            <p class="text-[clamp(11px,1.5vw,15px)] opacity-90 leading-snug max-w-full">Pantau jalannya pemilihan secara real-time, transparan, dan aman.</p>
+                        </div>
+                    </div>
+                    <div class="mb-4 sm:mb-5 md:mb-6">
+                        <div
+                            class="bg-[#7a93a8] text-white text-[clamp(10px,2vw,14px)] font-bold uppercase px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 rounded-t flex justify-between items-center gap-2">
+                            <span><i class="fas fa-chart-pie mr-1"></i> Ringkasan Partisipasi</span>
+                        </div>
+                        <div
+                            class="bg-white p-2 sm:p-3 md:p-4 rounded-b border border-gray-200 border-t-0 shadow-sm grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+                            <div
+                                class="bg-[#7e37d8] rounded-lg text-white p-2 sm:p-3 flex justify-between items-center relative overflow-hidden shadow-sm h-[clamp(70px,20vw,90px)] hover:shadow-md transition-shadow">
+                                <div class="z-10 min-w-0">
+                                    <div class="text-[clamp(8px,1.5vw,10px)] font-semibold uppercase mb-0.5 opacity-90 line-clamp-1">Total Pemilih</div>
+                                    <div class="text-[clamp(14px,3vw,20px)] font-bold" id="stat-total">0</div>
+                                </div>
+                                <i
+                                    class="fas fa-users text-[clamp(32px,8vw,48px)] absolute -right-2 -bottom-2 opacity-25 z-0"></i>
+                            </div>
+                            <div
+                                class="bg-[#1cc07b] rounded-lg text-white p-2 sm:p-3 flex justify-between items-center relative overflow-hidden shadow-sm h-[clamp(70px,20vw,90px)] hover:shadow-md transition-shadow">
+                                <div class="z-10 min-w-0">
+                                    <div class="text-[clamp(8px,1.5vw,10px)] font-semibold uppercase mb-0.5 opacity-90 line-clamp-1">Suara Masuk</div>
+                                    <div class="text-[clamp(14px,3vw,20px)] font-bold" id="stat-masuk">0</div>
+                                </div>
+                                <i
+                                    class="fas fa-check-square text-[clamp(32px,8vw,48px)] absolute -right-2 -bottom-2 opacity-25 z-0"></i>
+                            </div>
+                            <div
+                                class="bg-[#ff2f59] rounded-lg text-white p-2 sm:p-3 flex justify-between items-center relative overflow-hidden shadow-sm h-[clamp(70px,20vw,90px)] hover:shadow-md transition-shadow">
+                                <div class="z-10 min-w-0">
+                                    <div class="text-[clamp(8px,1.5vw,10px)] font-semibold uppercase mb-0.5 opacity-90 line-clamp-1">Belum Memilih</div>
+                                    <div class="text-[clamp(14px,3vw,20px)] font-bold" id="stat-belum">0</div>
+                                </div>
+                                <i
+                                    class="fas fa-times-circle text-[clamp(32px,8vw,48px)] absolute -right-2 -bottom-2 opacity-25 z-0"></i>
+                            </div>
+                            <div
+                                class="bg-[#2463e2] rounded-lg text-white p-2 sm:p-3 flex justify-between items-center relative overflow-hidden shadow-sm h-[clamp(70px,20vw,90px)] hover:shadow-md transition-shadow">
+                                <div class="z-10 min-w-0">
+                                    <div class="text-[clamp(8px,1.5vw,10px)] font-semibold uppercase mb-0.5 opacity-90 line-clamp-1">Partisipasi</div>
+                                    <div class="text-[clamp(14px,3vw,20px)] font-bold" id="stat-persen">0%</div>
+                                </div>
+                                <i
+                                    class="fas fa-chart-line text-[clamp(32px,8vw,48px)] absolute -right-2 -bottom-2 opacity-25 z-0"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-2 gap-2 flex-wrap">
+                            <h2 class="text-base sm:text-lg font-bold text-gray-800"><i
+                                    class="fas fa-list-ol mr-2 text-[#38bdf8]"></i>Data Partisipasi</h2>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button onclick="updateDashboard()" title="Muat ulang data dashboard (manual)"
+                                    class="bg-[#3498db] hover:bg-[#2980b9] text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded text-[10px] sm:text-xs font-bold shadow transition-colors flex items-center gap-1 active:scale-95">
+                                    <i class="fas fa-sync-alt"></i> <span class="hidden sm:inline">Refresh</span>
+                                </button>
+                                <button onclick="exportPDF()"
+                                    class="bg-[#e74c3c] hover:bg-[#c0392b] text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded text-[10px] sm:text-xs font-bold shadow transition-colors flex items-center gap-1 active:scale-95">
+                                    <i class="fas fa-file-pdf"></i> Download Hasil (PDF)
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto custom-scroll">
+                                <table id="tabel-partisipasi"
+                                    class="w-full text-center border-collapse min-w-[500px] text-xs sm:text-sm">
+                                    <thead>
+                                        <tr class="bg-[#2c3e50] text-white text-[11px] sm:text-xs uppercase">
+                                            <th class="py-3 px-3 border border-gray-300">Tipe Pengguna</th>
+                                            <th class="py-3 px-3 border border-gray-300">Total Pemilih</th>
+                                            <th class="py-3 px-3 border border-gray-300">Suara Masuk</th>
+                                            <th class="py-3 px-3 border border-gray-300">Suara Belum Masuk</th>
+                                            <th class="py-3 px-3 border border-gray-300">Persentase</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabel-partisipasi-body" class="text-gray-700">
+                                        <tr>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">Siswa</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">Guru</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">Staf</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0</td>
+                                            <td class="py-3 px-3 border-x border-gray-100 text-center">0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-3 px-3 text-center font-bold bg-[#2980b9] text-white">TOTAL</td>
+                                            <td class="py-3 px-3 text-center font-bold bg-[#3498db] text-white">0</td>
+                                            <td class="py-3 px-3 text-center font-bold bg-[#3498db] text-white">0</td>
+                                            <td class="py-3 px-3 text-center font-bold bg-[#3498db] text-white">0</td>
+                                            <td class="py-3 px-3 text-center font-bold bg-[#3498db] text-white">0%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <div class="mb-2">
+                            <h2 class="text-base sm:text-lg font-bold text-gray-800"><i
+                                    class="fas fa-trophy mr-2 text-amber-500"></i>Kandidat Terpilih</h2>
+                            <p class="text-[11px] sm:text-xs text-gray-500">Hasil sementara berdasarkan perolehan suara
+                                terbanyak di setiap posisi.</p>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto custom-scroll">
+                                <table id="tabel-pemenang"
+                                    class="w-full text-center border-collapse min-w-[500px] text-xs sm:text-sm">
+                                    <thead>
+                                        <tr class="bg-[#2c3e50] text-white text-[11px] sm:text-xs uppercase">
+                                            <th class="py-3 px-3 border border-gray-300 w-16">No. Urut</th>
+                                            <th class="py-3 px-3 border border-gray-300 text-center">Posisi</th>
+                                            <th class="py-3 px-3 border border-gray-300 text-center">Nama Kandidat</th>
+                                            <th class="py-3 px-3 border border-gray-300">Kelas</th>
+                                            <th class="py-3 px-3 border border-gray-300">Perolehan Suara</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabel-pemenang-body" class="text-gray-700">
+                                        <tr>
+                                            <td colspan="5" class="py-8 text-gray-500 text-center">Belum ada data kandidat.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="mb-2">
+                            <h2 class="text-base sm:text-lg font-bold text-gray-800"><i
+                                    class="fas fa-chart-bar mr-2 text-indigo-500"></i>Hasil Rinci Pemilihan</h2>
+                            <p class="text-[11px] sm:text-xs text-gray-500">Rincian perolehan suara untuk setiap
+                                kandidat dari semua jenis pemilih.</p>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto custom-scroll">
+                                <table id="tabel-rinci"
+                                    class="w-full text-center border-collapse min-w-[700px] text-xs sm:text-sm">
+                                    <thead>
+                                        <tr class="bg-[#2c3e50] text-white text-[11px] sm:text-xs uppercase">
+                                            <th class="py-3 px-3 border border-gray-300 w-16">No. Urut</th>
+                                            <th class="py-3 px-3 border border-gray-300 text-center">Nama Kandidat</th>
+                                            <th class="py-3 px-3 border border-gray-300 text-center">Posisi</th>
+                                            <th class="py-3 px-3 border border-gray-300">Suara Siswa</th>
+                                            <th class="py-3 px-3 border border-gray-300">Suara Guru</th>
+                                            <th class="py-3 px-3 border border-gray-300">Suara Staf</th>
+                                            <th class="py-3 px-3 border border-gray-300">Jumlah Suara</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabel-rinci-body" class="text-gray-700">
+                                        <tr>
+                                            <td colspan="7" class="py-8 text-gray-500 text-center">Belum ada data kandidat.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-pemilih" class="view-content hidden">
+                    <div
+                        class="md:hidden flex bg-white rounded-lg shadow-sm mb-3 overflow-hidden border border-gray-200">
+                        <button id="mob-tab-siswa" onclick="switchViewHtml('pemilih-siswa')"
+                            class="flex-1 py-3 text-[11px] font-bold text-center border-b-2 border-[#38bdf8] text-[#38bdf8] transition-colors bg-white">
+                            <i class="fas fa-user-graduate mr-1"></i> Siswa
+                        </button>
+                        <button id="mob-tab-guru" onclick="switchViewHtml('pemilih-guru')"
+                            class="flex-1 py-3 text-[11px] font-bold text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors bg-white hover:bg-gray-50">
+                            <i class="fas fa-chalkboard-teacher mr-1"></i> Guru
+                        </button>
+                        <button id="mob-tab-staf" onclick="switchViewHtml('pemilih-staf')"
+                            class="flex-1 py-3 text-[11px] font-bold text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors bg-white hover:bg-gray-50">
+                            <i class="fas fa-user-cog mr-1"></i> Staf
+                        </button>
+                    </div>
+                    <div class="bg-white p-4 sm:p-6 rounded shadow-sm border border-gray-200">
+                        <div class="mb-4">
+                            <h2 class="text-base sm:text-xl font-bold text-gray-800 mb-0.5"><i
+                                    class="fas fa-users mr-2 text-sky-600"></i>Data Siswa</h2>
+                            <p class="text-xs text-gray-500">Pengelolaan data siswa yang berhak memberikan suara.</p>
+                        </div>
+                        <div
+                            class="flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-3 sm:gap-4 border-t border-gray-100 pt-4 mb-4">
+                            <div class="flex flex-row gap-2.5 items-center w-full xl:w-auto">
+                                <div id="kelasFilterContainer" class="w-1/2 sm:w-40 flex-shrink-0">
+                                    <select id="voterFilterKelas" onchange="filterVoterByKelas(this.value)"
+                                        class="w-full h-9 px-2.5 border border-gray-300 rounded text-[11px] sm:text-xs focus:ring focus:ring-sky-200 focus:outline-none transition-all bg-white">
+                                        <option value="">-- Semua Kelas --</option>
+                                    </select>
+                                </div>
+                                <div class="relative w-1/2 sm:w-56 flex-shrink-0">
+                                    <span
+                                        class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400">
+                                        <i class="fas fa-search text-[11px] sm:text-xs"></i>
+                                    </span>
+                                    <input type="text" id="voterSearchInput" oninput="searchVoter(this.value)"
+                                        placeholder="Cari Nama..."
+                                        class="w-full h-9 pl-8 pr-2.5 border border-gray-300 rounded text-[11px] sm:text-xs focus:ring focus:ring-sky-200 focus:outline-none transition-all">
+                                </div>
+                            </div>
+                            <div class="voter-candidate-btn-group">
+                                <button onclick="downloadVoterCardsPdf()" title="Download Kartu"
+                                    class="admin-toolbar-btn bg-[#3498db] hover:bg-[#2980b9]">
+                                    <i class="fas fa-id-card"></i> <span class="admin-btn-label">Download Kartu</span>
+                                </button>
+                                <button onclick="downloadExcelTemplate()" title="Template Excel"
+                                    class="admin-toolbar-btn bg-[#f39c12] hover:bg-[#d68910]">
+                                    <i class="fas fa-download"></i> <span class="admin-btn-label">Template Excel</span>
+                                </button>
+                                <button onclick="document.getElementById('excelFileInput').click()" title="Import Excel"
+                                    class="admin-toolbar-btn bg-[#27ae60] hover:bg-[#219653]">
+                                    <i class="fas fa-file-excel"></i> <span class="admin-btn-label">Import Excel</span>
+                                </button>
+                                <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden"
+                                    onchange="handleExcelImport(event)">
+                                <button id="btnAddVoter" onclick="openVoterModal()" title="Tambah Siswa"
+                                    class="admin-toolbar-btn bg-[#5c4033] hover:bg-[#4a332a]">
+                                    <i class="fas fa-plus"></i> <span class="admin-btn-label">Tambah Siswa</span>
+                                </button>
+                                <button id="btnDeleteAllVoters" onclick="deleteAllVotersByType()" title="Hapus Semua Data Siswa"
+                                    class="admin-toolbar-btn bg-[#e74c3c] hover:bg-[#c0392b]">
+                                    <i class="fas fa-trash-alt"></i> <span class="admin-btn-label">Hapus Semua</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto custom-scroll border border-gray-200 rounded">
+                            <table id="voterTable"
+                                class="w-full text-center border-collapse min-w-[600px] text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="bg-[#2c3e50] text-white text-[11px] sm:text-xs uppercase">
+                                        <th class="py-3 px-3 border border-gray-200 w-16">No.</th>
+                                        <th id="voterIdHeader" class="py-3 px-3 border border-gray-200">NIS</th>
+                                        <th class="py-3 px-3 border border-gray-200 text-center">Nama</th>
+                                        <th id="voterClassHeader" class="py-3 px-3 border border-gray-200">Kelas</th>
+                                        <th class="py-3 px-3 border border-gray-200">Jenis Kelamin</th>
+                                        <th class="py-3 px-3 border border-gray-200">Password</th>
+                                        <th class="py-3 px-3 border border-gray-200">Status Voting</th>
+                                        <th class="py-3 px-3 border border-gray-200 w-44">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="voterTableBody" class="text-gray-700">
+                                    <tr>
+                                        <td colspan="8" class="py-10 text-gray-400">
+                                            <i class="fas fa-spinner animate-spin text-2xl mb-2 block"></i>
+                                            Memuat data...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4">
+                            <div class="flex items-center gap-3">
+                                <div id="voterTableInfo" class="text-[11px] sm:text-xs text-gray-500 font-medium">
+                                    Menampilkan 0-0 dari 0 data
+                                </div>
+                                <select id="voterLimitSelect" onchange="changeVoterLimit(this.value)"
+                                    class="h-8 px-2 border border-gray-300 rounded text-[11px] sm:text-xs focus:ring focus:ring-sky-200 focus:outline-none transition-all bg-white text-gray-600">
+                                    <option value="10">10 / halaman</option>
+                                    <option value="30">30 / halaman</option>
+                                    <option value="50">50 / halaman</option>
+                                    <option value="all">Semua Data</option>
+                                </select>
+                            </div>
+                            <div id="voterPagination" class="flex gap-1 flex-wrap">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-kandidat" class="view-content hidden">
+                    <div class="bg-white p-4 sm:p-6 rounded shadow-sm border border-gray-200">
+                        <div class="mb-4">
+                            <h2 class="text-base sm:text-xl font-bold text-gray-800 mb-0.5"><i
+                                    class="fas fa-user-tie mr-2 text-indigo-600"></i>Data Kandidat</h2>
+                            <p class="text-xs text-gray-500">Kelola daftar calon yang akan ditampilkan di halaman
+                                pemilihan.</p>
+                        </div>
+                        <div class="border-t border-gray-100 pt-4 mb-4 flex justify-end">
+                            <div class="voter-candidate-btn-group">
+                                <button onclick="downloadWordTemplateKandidat()" title="Template Word"
+                                    class="admin-toolbar-btn bg-[#f39c12] hover:bg-[#d68910]">
+                                    <i class="fas fa-file-word"></i> <span class="admin-btn-label">Template Word</span>
+                                </button>
+                                <button onclick="document.getElementById('wordCandidateInput').click()" title="Import Word"
+                                    class="admin-toolbar-btn bg-[#3498db] hover:bg-[#2980b9]">
+                                    <i class="fas fa-file-import"></i> <span class="admin-btn-label">Import Word</span>
+                                </button>
+                                <input type="file" id="wordCandidateInput" accept=".docx" class="hidden"
+                                    onchange="handleWordKandidatImport(event)">
+                                <button onclick="openCandidateModal('add')" title="Tambah Manual"
+                                    class="admin-toolbar-btn bg-[#5c4033] hover:bg-[#4a332a]">
+                                    <i class="fas fa-plus"></i> <span class="admin-btn-label">Tambah Manual</span>
+                                </button>
+                                <button onclick="deleteAllCandidates()" title="Hapus Semua"
+                                    class="admin-toolbar-btn bg-[#e74c3c] hover:bg-[#c0392b]">
+                                    <i class="fas fa-trash-alt"></i> <span class="admin-btn-label">Hapus Semua</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto custom-scroll border border-gray-200 rounded mt-4">
+                            <table class="w-full text-center border-collapse min-w-[600px] text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="bg-[#2c3e50] text-white text-[11px] sm:text-xs uppercase">
+                                        <th class="py-3 px-3 border border-gray-200 whitespace-nowrap w-12 text-center">
+                                            No.</th>
+                                        <th class="py-3 px-3 border border-gray-200 whitespace-nowrap">No. Urut</th>
+                                        <th class="py-3 px-3 border border-gray-200 text-center whitespace-nowrap">
+                                            Posisi</th>
+                                        <th class="py-3 px-3 border border-gray-200 text-center whitespace-nowrap">Nama
+                                            Kandidat</th>
+                                        <th class="py-3 px-3 border border-gray-200 whitespace-nowrap">Kelas</th>
+                                        <th class="py-3 px-3 border border-gray-200 text-center min-w-[200px]">Visi</th>
+                                        <th class="py-3 px-3 border border-gray-200 text-center min-w-[200px]">Misi</th>
+                                        <th class="py-3 px-3 border border-gray-200 whitespace-nowrap">Foto</th>
+                                        <th class="py-3 px-3 border border-gray-200 whitespace-nowrap">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="candidateTableBody" class="text-gray-700">
+                                    <tr>
+                                        <td colspan="9" class="py-10 text-gray-400 text-center">
+                                            <i class="fas fa-spinner animate-spin text-2xl mb-2 block"></i>
+                                            Memuat data kandidat...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-admin" class="view-content hidden">
+                    <div class="bg-white p-4 sm:p-6 rounded shadow-sm border border-gray-200">
+                        <div class="mb-4">
+                            <h2 class="text-base sm:text-xl font-bold text-gray-800 mb-0.5"><i
+                                    class="fas fa-user-shield mr-2 text-violet-600"></i>Data Admin</h2>
+                            <p class="text-xs text-gray-500">Kelola akun administrator untuk mengakses dashboard ini.</p>
+                        </div>
+                        <div
+                            class="flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-3 sm:gap-4 border-t border-gray-100 pt-4 mb-4">
+                            <div class="flex flex-row gap-2.5 items-center w-full xl:w-auto">
+                                <div class="relative w-full sm:w-56 flex-shrink-0">
+                                    <span
+                                        class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400">
+                                        <i class="fas fa-search text-[11px] sm:text-xs"></i>
+                                    </span>
+                                    <input type="text" id="adminSearchInput" oninput="searchAdmin(this.value)"
+                                        placeholder="Cari Username..."
+                                        class="w-full h-9 pl-8 pr-2.5 border border-gray-300 rounded text-[11px] sm:text-xs focus:ring focus:ring-sky-200 focus:outline-none transition-all">
+                                </div>
+                            </div>
+                            <div class="voter-candidate-btn-group">
+                                <button onclick="openAdminModal('add')" title="Tambah Admin"
+                                    class="admin-toolbar-btn bg-[#5c4033] hover:bg-[#4a332a]">
+                                    <i class="fas fa-plus"></i> <span class="admin-btn-label">Tambah Admin</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto custom-scroll border border-gray-200 rounded">
+                            <table id="adminTable"
+                                class="w-full text-center border-collapse min-w-[600px] text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="bg-[#2c3e50] text-white text-[11px] sm:text-xs uppercase">
+                                        <th class="py-3 px-3 border border-gray-200 w-16">No.</th>
+                                        <th class="py-3 px-3 border border-gray-200">Username</th>
+                                        <th class="py-3 px-3 border border-gray-200">Password</th>
+                                        <th class="py-3 px-3 border border-gray-200 w-28">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTableBody" class="text-gray-700">
+                                    <tr>
+                                        <td colspan="4" class="py-10 text-gray-400">
+                                            <i class="fas fa-spinner animate-spin text-2xl mb-2 block"></i>
+                                            Memuat data admin...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4">
+                            <div id="adminTableInfo" class="text-[11px] sm:text-xs text-gray-500 font-medium">
+                                Menampilkan 0-0 dari 0 data
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-jadwal" class="view-content hidden">
+                    <div class="bg-white p-4 sm:p-6 rounded shadow-sm border border-gray-200">
+                        <div class="mb-4">
+                            <h2 class="text-base sm:text-xl font-bold text-gray-800 mb-0.5"><i
+                                    class="fas fa-calendar-alt mr-2 text-sky-600"></i>Jadwal Pemilihan</h2>
+                            <p class="text-xs text-gray-500">Atur jadwal pemilihan secara manual atau otomatis.
+                                Keduanya saling bergantian: manual dibuka akan mereset jadwal otomatis; jadwal
+                                otomatis aktif akan menutup kontrol manual.</p>
+                        </div>
+                        <div class="space-y-6">
+                            <div
+                                class="bg-gray-50 border border-gray-200 rounded p-4 flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-bold text-gray-800">Kontrol Manual</h3>
+                                    <p class="text-[11px] sm:text-xs text-gray-500">Buka atau tutup akses pemilihan
+                                        secara langsung.</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="manualToggleStatus" class="sr-only peer"
+                                        onchange="toggleJadwalManual(this.checked)">
+                                    <div
+                                        class="w-11 h-6 bg-rose-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500">
+                                    </div>
+                                    <span class="ml-3 text-xs font-bold text-rose-600"
+                                        id="manualToggleLabel">TUTUP</span>
+                                </label>
+                            </div>
+                            <div class="border-t border-gray-100 pt-4">
+                                <h3 class="text-sm font-bold text-gray-800 mb-1"><i
+                                        class="fas fa-clock text-sky-600 mr-1"></i> Jadwal Otomatis</h3>
+                                <p class="text-[11px] sm:text-xs text-gray-500 mb-4">Atur waktu mulai dan selesai. Jika
+                                    diatur, sistem akan otomatis mengikuti jadwal ini.</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 mb-1">Waktu
+                                            Mulai</label>
+                                        <input type="datetime-local" id="jadwalMulai"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring focus:ring-sky-200 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-700 mb-1">Waktu
+                                            Selesai</label>
+                                        <input type="datetime-local" id="jadwalSelesai"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring focus:ring-sky-200 focus:outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pt-4 border-t border-gray-100">
+                                <button onclick="simpanJadwalOtomatis()"
+                                    class="w-full md:w-auto bg-[#1b5e32] hover:bg-[#154625] text-white px-5 py-2.5 rounded text-xs sm:text-sm font-bold flex justify-center items-center gap-2 shadow-sm transition-all hover:scale-[1.02] active:scale-95">
+                                    <i class="fas fa-save"></i>
+                                    Simpan Jadwal Otomatis
+                                </button>
+                                <div id="infoJadwalAktif"
+                                    class="mt-4 p-3 bg-slate-100 border border-slate-300 rounded text-xs sm:text-sm text-slate-800 font-medium flex items-start sm:items-center justify-start sm:justify-center gap-2.5">
+                                    <i
+                                        class="fas fa-info-circle text-slate-500 text-base sm:text-lg flex-shrink-0 mt-0.5 sm:mt-0"></i>
+                                    <span class="leading-snug text-left">Status: Belum memuat data...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-pengaturan" class="view-content hidden">
+                    <div class="w-full bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div
+                            class="bg-[#7a93a8] text-white text-xs sm:text-sm font-bold uppercase px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between">
+                            <span class="flex items-center gap-2">
+                                <i class="fas fa-sliders-h"></i> Konfigurasi Aplikasi Pilkasis
+                            </span>
+                        </div>
+                        <div class="p-4 sm:p-6 space-y-6">
+                            <div class="space-y-4">
+                                <h3
+                                    class="text-xs font-bold uppercase text-gray-700 tracking-wider border-b border-gray-100 pb-2 flex items-center gap-2">
+                                    <i class="fas fa-school text-[#7a93a8]"></i> <span
+                                        class="hidden sm:inline">Informasi Sekolah</span>
+                                </h3>
+                                <div>
+                                    <label
+                                        class="block text-[10px] sm:text-xs font-bold uppercase text-gray-700 mb-1.5 tracking-wider">Nama
+                                        Sekolah</label>
+                                    <div class="relative rounded-md shadow-sm">
+                                        <div
+                                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                            <i class="fas fa-school text-xs sm:text-sm"></i>
+                                        </div>
+                                        <input type="text" id="inputSchoolName"
+                                            class="block w-full pl-9 pr-3 py-2 sm:py-2.5 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#7a93a8] focus:border-[#7a93a8] transition-colors"
+                                            placeholder="Masukkan nama sekolah...">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label
+                                        class="block text-[10px] sm:text-xs font-bold uppercase text-gray-700 mb-1.5 tracking-wider">Judul
+                                        Pemilihan</label>
+                                    <div class="relative rounded-md shadow-sm">
+                                        <div
+                                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                            <i class="fas fa-file-signature text-xs sm:text-sm"></i>
+                                        </div>
+                                        <input type="text" id="inputExamTitle"
+                                            class="block w-full pl-9 pr-3 py-2 sm:py-2.5 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#7a93a8] focus:border-[#7a93a8] transition-colors"
+                                            placeholder="Masukkan judul pemilihan...">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <h3
+                                    class="text-xs font-bold uppercase text-gray-700 tracking-wider border-b border-gray-100 pb-2 flex items-center gap-2">
+                                    <i class="fas fa-users-cog text-[#7a93a8]"></i> <span class="hidden sm:inline">Antrean Login Massal</span>
+                                </h3>
+                                <div>
+                                    <label
+                                        class="block text-[10px] sm:text-xs font-bold uppercase text-gray-700 mb-1.5 tracking-wider">Profil Antrean Login</label>
+                                    <select id="inputLoginQueueProfile"
+                                        class="block w-full px-3 py-2 sm:py-2.5 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#7a93a8] focus:border-[#7a93a8] transition-colors bg-white">
+                                        <option value="free">Free Tier (Aman) — sebar login ~60 detik</option>
+                                        <option value="pro">Pro Tier (Cepat) — sebar login ~12 detik</option>
+                                    </select>
+                                    <p class="text-[10px] sm:text-xs text-gray-500 mt-2 leading-relaxed">
+                                        Atur sesuai paket Supabase. Mode <b>Free</b> lebih aman untuk login massal (~1500 pemilih).
+                                        Mode <b>Pro</b> lebih cepat jika server sudah di-upgrade.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="inline-flex items-center gap-2 text-[10px] sm:text-xs font-bold uppercase text-gray-700 tracking-wider mb-2">
+                                        <input type="checkbox" id="inputActiveVoterLimitEnabled" class="rounded border-gray-300 text-[#7a93a8] focus:ring-[#7a93a8]" checked>
+                                        Batasi pemilih aktif di bilik suara
+                                    </label>
+                                    <label
+                                        class="block text-[10px] sm:text-xs font-bold uppercase text-gray-700 mb-1.5 tracking-wider">Maksimal Pemilih Aktif</label>
+                                    <input type="number" id="inputMaxActiveVoters" min="10" max="500" step="1" value="80"
+                                        class="block w-full px-3 py-2 sm:py-2.5 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#7a93a8] focus:border-[#7a93a8] transition-colors bg-white">
+                                    <p class="text-[10px] sm:text-xs text-gray-500 mt-2 leading-relaxed">
+                                        Rekomendasi: <b>80</b> untuk Free tier, <b>200</b> untuk Pro. Pemilih lain menunggu otomatis jika slot penuh.
+                                    </p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label
+                                            class="block text-[10px] sm:text-xs font-bold uppercase text-gray-700 mb-1.5 tracking-wider">Durasi
+                                            Sesi Memilih di Bilik (menit)</label>
+                                        <input type="number" id="inputVotingBoothDuration" min="1" max="60" step="1" value="5"
+                                            class="block w-full px-3 py-2 sm:py-2.5 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#7a93a8] focus:border-[#7a93a8] transition-colors bg-white">
+                                        <p class="text-[10px] sm:text-xs text-gray-500 mt-2 leading-relaxed">
+                                            Ditampilkan sebagai hitung mundur di footer bilik suara. Jika habis, pemilih otomatis keluar dan harus login ulang dari awal.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label
+                                            class="block text-[10px] sm:text-xs font-bold uppercase text-gray-700 mb-1.5 tracking-wider">Batas
+                                            Waktu Tunggu Slot Penuh (menit)</label>
+                                        <input type="number" id="inputVotingWaitTimeout" min="1" max="60" step="1" value="15"
+                                            class="block w-full px-3 py-2 sm:py-2.5 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#7a93a8] focus:border-[#7a93a8] transition-colors bg-white">
+                                        <p class="text-[10px] sm:text-xs text-gray-500 mt-2 leading-relaxed">
+                                            Batas maksimal pemilih menunggu ketika kapasitas bilik sedang penuh sebelum diminta mencoba login lagi.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <h3
+                                    class="text-xs font-bold uppercase text-gray-700 tracking-wider border-b border-gray-100 pb-2 flex items-center gap-2">
+                                    <i class="fas fa-image text-[#7a93a8]"></i> <span class="hidden sm:inline">Logo
+                                        Sekolah</span>
+                                </h3>
+                                <div class="flex flex-col md:flex-row items-center gap-4">
+                                    <div class="flex-shrink-0 w-24 flex flex-col items-center">
+                                        <div
+                                            class="w-20 h-20 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                                            <img id="settingsLogoPreview"
+                                                src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+                                                alt="Pratinjau Logo" class="w-full h-full object-contain p-2">
+                                        </div>
+                                        <span id="activeLogoText"
+                                            class="text-[9px] text-gray-500 mt-1.5 font-mono font-semibold tracking-tighter text-center w-full truncate px-1">ID_Default</span>
+                                    </div>
+                                    <div class="flex-1 w-full">
+                                        <label
+                                            class="flex flex-col items-center justify-center w-full h-[45px] border border-dashed border-gray-300 rounded cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                            <div
+                                                class="flex items-center space-x-2 text-gray-500 text-[10px] sm:text-xs">
+                                                <i
+                                                    class="fas fa-cloud-upload-alt text-[#7a93a8] text-sm sm:text-base"></i>
+                                                <span id="logoUploadStatus" class="font-medium text-gray-600">Klik untuk
+                                                    mengunggah logo baru...</span>
+                                            </div>
+                                            <input type="file" id="inputLogoFile" accept="image/*" class="hidden"
+                                                onchange="processLogoFile(event)">
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <h3
+                                    class="text-xs font-bold uppercase text-gray-700 tracking-wider border-b border-gray-100 pb-2 flex items-center gap-2">
+                                    <i class="fas fa-desktop text-[#7a93a8]"></i> <span class="hidden sm:inline">Latar
+                                        Belakang Halaman Login</span>
+                                </h3>
+                                <div class="flex flex-col md:flex-row items-center gap-4">
+                                    <div class="flex-shrink-0 w-32 flex flex-col items-center">
+                                        <div
+                                            class="w-28 h-16 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden shadow-sm">
+                                            <img id="settingsBgPreview"
+                                                src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+                                                alt="Pratinjau Background" class="w-full h-full object-cover">
+                                        </div>
+                                        <span id="activeBgText"
+                                            class="text-[9px] text-gray-500 mt-1.5 font-mono font-semibold tracking-tighter text-center w-full truncate px-1">ID_Default</span>
+                                    </div>
+                                    <div class="flex-1 w-full">
+                                        <label
+                                            class="flex flex-col items-center justify-center w-full h-[45px] border border-dashed border-gray-300 rounded cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                            <div
+                                                class="flex items-center space-x-2 text-gray-500 text-[10px] sm:text-xs">
+                                                <i class="fas fa-file-image text-[#7a93a8] text-sm sm:text-base"></i>
+                                                <span id="bgUploadStatus" class="font-medium text-gray-600">Klik untuk
+                                                    mengunggah gambar latar belakang baru...</span>
+                                            </div>
+                                            <input type="file" id="inputBgFile" accept="image/*" class="hidden"
+                                                onchange="processLoginBgFile(event)">
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
+                                <button onclick="resetSettingsToDefault()"
+                                    class="w-full md:w-auto bg-slate-600 hover:bg-slate-700 text-white px-5 py-2.5 rounded text-xs sm:text-sm font-bold flex justify-center items-center gap-2 shadow-sm transition-all hover:scale-[1.02] active:scale-95">
+                                    <i class="fas fa-undo"></i>
+                                    Reset ke Default
+                                </button>
+                                <button onclick="commitSettings()"
+                                    class="w-full md:w-auto bg-[#1b5e32] hover:bg-[#154625] text-white px-5 py-2.5 rounded text-xs sm:text-sm font-bold flex justify-center items-center gap-2 shadow-sm transition-all hover:scale-[1.02] active:scale-95">
+                                    <i class="fas fa-save"></i>
+                                    Simpan Perubahan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col lg:flex-row gap-6 mt-6 items-stretch">
+                        <div class="w-full bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden">
+                        <div
+                            class="bg-rose-700 text-white text-xs sm:text-sm font-bold uppercase px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between">
+                            <span class="flex items-center gap-2">
+                                <i class="fas fa-exclamation-triangle"></i> Zona Bahaya (Danger Zone)
+                            </span>
+                        </div>
+                        <div class="p-4 sm:p-6 space-y-6">
+                            <p class="text-xs sm:text-sm text-slate-600">Tindakan berikut bersifat permanen dan tidak
+                                dapat dibatalkan. Pastikan Anda telah mengunduh data penting sebelum melanjutkan.</p>
+                            <div class="flex flex-col md:flex-row gap-6 border-t border-gray-100 pt-4">
+                                <div class="flex-1">
+                                    <h4 class="text-xs sm:text-sm font-bold text-slate-800 mb-1">Hapus Semua Hasil
+                                        Voting</h4>
+                                    <p class="text-[11px] sm:text-xs text-slate-500 mb-3">Tindakan ini akan mereset
+                                        status voting semua pemilih (siswa, guru, staf) menjadi "Belum Memilih" dan
+                                        mengembalikan perolehan suara semua kandidat ke 0.</p>
+                                    <button onclick="resetAllVoterStatus()"
+                                        class="danger-zone-btn bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5 active:scale-95">
+                                        <i class="fas fa-redo-alt"></i> <span>Reset Status Voting</span>
+                                    </button>
+                                </div>
+                                <div class="border-l border-gray-200 hidden md:block"></div>
+                                <div class="flex-1">
+                                    <h4 class="text-xs sm:text-sm font-bold text-slate-800 mb-1">Hapus Semua Data
+                                        (Kosongkan)</h4>
+                                    <p class="text-[11px] sm:text-xs text-slate-500 mb-3">Tindakan ini akan menghapus
+                                        seluruh data pemilih (siswa, guru, staf), data kandidat, serta log voting dari Supabase.
+                                        Akun admin, sesi admin, dan pengaturan aplikasi tetap aman, serta file gambar di Supabase Storage tidak ikut terhapus.</p>
+                                    <button onclick="clearAllVoterData()"
+                                        class="danger-zone-btn bg-rose-800 hover:bg-rose-900 text-white px-4 py-2 rounded text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5 active:scale-95">
+                                        <i class="fas fa-radiation"></i> <span>Hapus Semua Data</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+
+                <footer
+                    class="mt-8 text-[#9baebf] text-[9px] sm:text-[10px] text-center w-full z-10 font-bold tracking-widest pb-4">
+                    <span>&copy; 2026 SMAN 2 Kuningan | Developed by arnnon</span>
+                </footer>
+            </div>
+        </main>
+    </div>
+
+    <nav
+        class="md:hidden fixed bottom-0 left-0 w-full animate-theme-blink border-t border-white/10 z-40 flex justify-around items-center h-[65px] px-1 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.15)] pb-[env(safe-area-inset-bottom)]">
+        <a href="#" onclick="event.preventDefault(); switchView('dashboard')" id="bnav-dashboard"
+            class="flex flex-col items-center justify-center w-full h-full text-[#38bdf8] transition-all relative pt-1 active:scale-95">
+            <i class="fas fa-th-large text-lg sm:text-xl mb-1"></i>
+            <span class="text-[9px] sm:text-[10px] font-bold tracking-wide">Dashboard</span>
+        </a>
+        <a href="#" onclick="event.preventDefault(); switchView('pemilih')" id="bnav-pemilih"
+            class="flex flex-col items-center justify-center w-full h-full text-[#b5cbdf] transition-all relative pt-1 active:scale-95">
+            <i class="fas fa-users text-lg sm:text-xl mb-1"></i>
+            <span class="text-[9px] sm:text-[10px] font-bold tracking-wide">Pemilih</span>
+        </a>
+        <a href="#" onclick="event.preventDefault(); switchView('kandidat')" id="bnav-kandidat"
+            class="flex flex-col items-center justify-center w-full h-full text-[#b5cbdf] transition-all relative pt-1 active:scale-95">
+            <i class="fas fa-user-tie text-lg sm:text-xl mb-1"></i>
+            <span class="text-[9px] sm:text-[10px] font-bold tracking-wide">Kandidat</span>
+        </a>
+        <a href="#" onclick="event.preventDefault(); switchView('admin')" id="bnav-admin"
+            class="flex flex-col items-center justify-center w-full h-full text-[#b5cbdf] transition-all relative pt-1 active:scale-95">
+            <i class="fas fa-user-shield text-lg sm:text-xl mb-1"></i>
+            <span class="text-[9px] sm:text-[10px] font-bold tracking-wide">Admin</span>
+        </a>
+        <a href="#" onclick="event.preventDefault(); switchView('jadwal')" id="bnav-jadwal"
+            class="flex flex-col items-center justify-center w-full h-full text-[#b5cbdf] transition-all relative pt-1 active:scale-95">
+            <i class="fas fa-calendar-alt text-lg sm:text-xl mb-1"></i>
+            <span class="text-[9px] sm:text-[10px] font-bold tracking-wide">Jadwal</span>
+        </a>
+        <a href="#" onclick="event.preventDefault(); switchView('pengaturan')" id="bnav-pengaturan"
+            class="flex flex-col items-center justify-center w-full h-full text-[#b5cbdf] transition-all relative pt-1 active:scale-95">
+            <i class="fas fa-cog text-lg sm:text-xl mb-1"></i>
+            <span class="text-[9px] sm:text-[10px] font-bold tracking-wide">Atur</span>
+        </a>
+    </nav>
+
+    <div id="customModal" class="fixed inset-0 z-[9999] flex items-center justify-center modal-overlay p-4">
+        <div class="animated-border-wrapper shadow-2xl max-w-sm w-full max-h-[90dvh] rounded-xl modal-content">
+            <div class="animated-border-inner p-5 sm:p-6 w-full h-full overflow-y-auto custom-scroll relative">
+                <h3 class="text-lg font-bold text-white mb-2" id="customModalTitle">Konfirmasi</h3>
+                <p class="text-sm text-slate-300 mb-6" id="customModalBody">Pesan modal</p>
+                <div class="flex justify-end gap-3">
+                    <button id="modalBtnCancel"
+                        class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/10">Batal</button>
+                    <button id="modalBtnConfirm"
+                        class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-700 text-white">Oke</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="voterModal" class="fixed inset-0 z-[9999] flex items-center justify-center modal-overlay p-4">
+        <div class="animated-border-wrapper shadow-2xl max-w-md w-full max-h-[90dvh] rounded-xl modal-content">
+            <div class="animated-border-inner p-5 sm:p-6 w-full h-full overflow-y-auto custom-scroll relative">
+                <h3 class="text-lg font-bold text-white mb-4" id="voterModalTitle">Tambah Pemilih</h3>
+                <form id="voterForm" onsubmit="saveVoter(event)">
+                    <input type="hidden" id="voterActionType" value="add">
+                    <div class="mb-4">
+                        <label id="lblVoterId"
+                            class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">NIS</label>
+                        <input type="text" id="voterIdInput"
+                            class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm" required
+                            autocomplete="off">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Nama
+                            Lengkap</label>
+                        <input type="text" id="voterNameInput"
+                            class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm" required
+                            autocomplete="off">
+                    </div>
+                    <div class="mb-4" id="voterClassInputContainer">
+                        <label
+                            class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kelas</label>
+                        <input type="text" id="voterClassInput"
+                            class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm" autocomplete="off"
+                            placeholder="Contoh: X IPA 1">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jenis
+                            Kelamin</label>
+                        <select id="voterJkInput"
+                            class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm bg-[#1a2f4c]" required>
+                            <option value="L">Laki-Laki</option>
+                            <option value="P">Perempuan</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label
+                            class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Password</label>
+                        <div class="relative">
+                            <input type="password" id="voterPasswordInput"
+                                class="glass-input w-full pl-4 pr-10 py-2.5 rounded-xl text-xs sm:text-sm"
+                                placeholder="Kosongkan untuk password default">
+                            <button type="button" id="toggleVoterFormPasswordBtn"
+                                class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-white focus:outline-none">
+                                <i class="fas fa-eye text-xs" id="voterFormPasswordIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 border-t border-white/10 pt-4 mt-2">
+                        <button type="button" onclick="closeVoterModal()"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/10">Batal</button>
+                        <button type="submit"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold bg-sky-600 hover:bg-sky-700 text-white">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="candidateModal" class="fixed inset-0 z-[9999] flex items-center justify-center modal-overlay p-4">
+        <div class="animated-border-wrapper shadow-2xl max-w-md w-full max-h-[90dvh] rounded-xl modal-content">
+            <div class="animated-border-inner p-5 sm:p-6 w-full h-full overflow-y-auto custom-scroll relative">
+                <h3 class="text-lg font-bold text-white mb-4" id="candidateModalTitle">Tambah Kandidat</h3>
+                <form id="candidateForm" onsubmit="saveCandidate(event)">
+                    <input type="hidden" id="candidateActionType" value="add">
+                    <input type="hidden" id="candidateIdInput" value="">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">No.
+                                Urut</label>
+                            <input type="number" id="candidateNoUrutInput"
+                                class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm" required min="1"
+                                autocomplete="off">
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kelas</label>
+                            <input type="text" id="candidateKelasInput"
+                                class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm" required
+                                placeholder="Contoh: XI IPA 1" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Nama
+                            Kandidat</label>
+                        <input type="text" id="candidateNameInput"
+                            class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm" required
+                            autocomplete="off">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Posisi /
+                            Jabatan</label>
+                        <select id="candidatePosisiInput"
+                            class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm bg-[#1a2f4c]" required>
+                            <option value="">-- Pilih Posisi --</option>
+                            <option value="Ketua Umum OSIS">Ketua Umum OSIS</option>
+                            <option value="Ketua 2 OSIS">Ketua 2 OSIS</option>
+                            <option value="Ketua Umum DPK">Ketua Umum DPK</option>
+                            <option value="Ketua 2 DPK">Ketua 2 DPK</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label
+                            class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Visi</label>
+                        <textarea id="candidateVisiInput" rows="3"
+                            class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm bg-transparent"
+                            placeholder="Masukkan Visi"></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label
+                            class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Misi</label>
+                        <textarea id="candidateMisiInput" rows="4"
+                            class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm bg-transparent"
+                            placeholder="Masukkan Misi"></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Foto
+                            Kandidat</label>
+                        <div class="flex items-center gap-4">
+                            <div class="flex-shrink-0 w-16 flex flex-col items-center">
+                                <div
+                                    class="w-14 h-14 bg-slate-800/50 border border-white/10 rounded-lg flex items-center justify-center overflow-hidden">
+                                    <img id="candidatePhotoPreview"
+                                        src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+                                        class="w-full h-full object-cover">
+                                </div>
+                                <span id="activeCandidatePhotoText"
+                                    class="text-[9px] text-slate-400 mt-1.5 font-mono font-semibold tracking-tighter text-center w-full truncate px-1">ID_Default</span>
+                            </div>
+                            <div class="flex-1 w-full">
+                                <label
+                                    class="flex flex-col items-center justify-center w-full h-[45px] border border-dashed border-white/20 rounded-lg cursor-pointer bg-white/5 hover:bg-white/10 transition-colors">
+                                    <div class="flex items-center space-x-2 text-slate-300 text-[10px] sm:text-xs">
+                                        <i class="fas fa-cloud-upload-alt text-sky-400 text-sm sm:text-base"></i>
+                                        <span id="candidatePhotoUploadStatus" class="font-medium text-slate-300">Klik
+                                            untuk mengunggah foto (otomatis ≤100 KB)...</span>
+                                    </div>
+                                    <input type="file" id="candidatePhotoFileInput" accept="image/*" class="hidden"
+                                        onchange="processCandidatePhoto(event)">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 border-t border-white/10 pt-4 mt-2">
+                        <button type="button" onclick="closeCandidateModal()"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/10">Batal</button>
+                        <button type="submit"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminProfileModal" class="fixed inset-0 z-[9999] flex items-center justify-center modal-overlay p-4">
+        <div class="animated-border-wrapper shadow-2xl max-w-sm w-full max-h-[90dvh] rounded-xl modal-content">
+            <div class="animated-border-inner p-5 sm:p-6 w-full h-full overflow-y-auto custom-scroll relative">
+                <h3 class="text-lg font-bold text-white mb-4" id="adminModalTitle"><i
+                        class="fas fa-user-shield mr-2 text-sky-400"></i>Tambah Admin</h3>
+                <form id="adminProfileForm" onsubmit="saveAdminProfile(event)" autocomplete="off">
+                    <input type="hidden" id="adminActionType" value="add">
+                    <input type="hidden" id="adminEditUsername" value="">
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+                            id="adminUsernameLabel">Username</label>
+                        <input type="text" id="adminUsernameInput" name="admin-username-field"
+                            class="glass-input w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm" required
+                            autocomplete="off">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+                            id="adminPasswordLabel">Password</label>
+                        <div class="relative">
+                            <input type="password" id="adminPasswordInput" name="admin-new-password-field"
+                                class="glass-input w-full pl-4 pr-10 py-2.5 rounded-xl text-xs sm:text-sm" required
+                                autocomplete="new-password">
+                            <button type="button" onclick="toggleVisibility('adminPasswordInput', 'adminPasswordIcon')"
+                                class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-white focus:outline-none">
+                                <i class="fas fa-eye text-xs" id="adminPasswordIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-5">
+                        <label
+                            class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Konfirmasi
+                            Password</label>
+                        <div class="relative">
+                            <input type="password" id="adminPasswordConfirmInput" name="admin-confirm-password-field"
+                                class="glass-input w-full pl-4 pr-10 py-2.5 rounded-xl text-xs sm:text-sm" required
+                                autocomplete="new-password">
+                            <button type="button"
+                                onclick="toggleVisibility('adminPasswordConfirmInput', 'adminPasswordConfirmIcon')"
+                                class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-white focus:outline-none">
+                                <i class="fas fa-eye text-xs" id="adminPasswordConfirmIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 border-t border-white/10 pt-4 mt-2">
+                        <button type="button" onclick="closeAdminProfileModal()"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-colors">Batal</button>
+                        <button type="submit"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold bg-sky-600 hover:bg-sky-700 text-white transition-colors">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="loginAlertBox" class="alert-box"></div>
+    <script src="assets/js/admin-core.js"></script>
+    <script src="assets/js/admin-voters.js"></script>
+    <script src="assets/js/kandidat-template-b64.js"></script>
+    <script src="assets/js/admin-candidates.js"></script>
+    <script src="assets/js/admin-system.js"></script>
+
+    <div id="connectionErrorOverlay" class="hidden fixed inset-0 z-[100000] bg-slate-950/95 flex items-center justify-center p-6 text-center">
+        <div class="max-w-md w-full bg-slate-900 border border-red-500/30 p-8 rounded-2xl shadow-2xl">
+            <div class="w-16 h-16 bg-red-950/50 border border-red-500/50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500 text-2xl animate-pulse">
+                <i class="fas fa-wifi"></i>
+            </div>
+            <h2 class="text-white text-xl font-bold mb-3">Koneksi Gagal / Library Tidak Terisi</h2>
+            <p class="text-slate-400 text-sm mb-6 leading-relaxed">
+                Aplikasi gagal terhubung ke database atau library eksternal penting (Supabase/Tailwind) tidak berhasil dimuat.
+                Pastikan perangkat Anda terhubung ke internet lalu muat ulang halaman ini.
+            </p>
+            <button onclick="window.location.reload()" class="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/30 transition-all active:scale-95">
+                Muat Ulang Halaman
+            </button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof db === 'undefined' || db === null || typeof tailwind === 'undefined') {
+                var overlay = document.getElementById('connectionErrorOverlay');
+                if (overlay) {
+                    overlay.classList.remove('hidden');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

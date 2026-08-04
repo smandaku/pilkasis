@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>PILKASIS SMANDA</title>
+    <style>
+        html,
+        body {
+            background-color: #0f172a !important;
+            margin: 0;
+            min-height: 100%;
+            min-height: 100dvh;
+        }
+    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/supabase.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script>
+        (function () {
+            var settings = typeof DEFAULT_SYSTEM_SETTINGS !== 'undefined' ? DEFAULT_SYSTEM_SETTINGS : {
+                schoolName: 'SMA Negeri 2 Kuningan',
+                examTitle: 'PILKASIS OSIS & DPK 2026',
+                schoolLogo: 'https://iili.io/B5MMKiX.png',
+                loginBg: 'https://fawclsxyvnwkmmuddhzi.supabase.co/storage/v1/object/public/pilkasis_smanda/settings/bg_8ZS782KR6Z.jpg'
+            };
+            var bg = settings.loginBg;
+            var logo = settings.schoolLogo;
+            [{ rel: 'preload', as: 'image', href: bg }, { rel: 'preload', as: 'image', href: logo }].forEach(function (cfg) {
+                var link = document.createElement('link');
+                link.rel = cfg.rel;
+                link.as = cfg.as;
+                link.href = cfg.href;
+                document.head.appendChild(link);
+            });
+            var favicon = document.createElement('link');
+            favicon.id = 'appFavicon';
+            favicon.rel = 'icon';
+            favicon.type = 'image/png';
+            favicon.href = logo;
+            document.head.appendChild(favicon);
+
+            try {
+                var bgKey = typeof normalizePilkasisAssetUrl === 'function' ? normalizePilkasisAssetUrl(
+                    (typeof AppStorage !== 'undefined' ? AppStorage.get('ep_login_bg') : null) || settings.loginBg,
+                    settings.loginBg
+                ) : settings.loginBg;
+                var logoKey = (typeof AppStorage !== 'undefined' ? AppStorage.get('ep_sh_logo') : null) || settings.schoolLogo;
+                window.__PILKASIS_EARLY = {
+                    bg: typeof resolveLocalAssetUrl === 'function' ? resolveLocalAssetUrl(bgKey, settings.loginBg) : settings.loginBg,
+                    logo: typeof resolveLocalAssetUrl === 'function' ? resolveLocalAssetUrl(logoKey, settings.schoolLogo) : settings.schoolLogo
+                };
+            } catch (e) {
+                window.__PILKASIS_EARLY = {
+                    bg: settings.loginBg,
+                    logo: settings.schoolLogo
+                };
+            }
+        })();
+    </script>
+</head>
+
+<body class="bg-[#0f172a] h-screen supports-[height:100dvh]:h-[100dvh] overflow-hidden flex flex-col">
+    <div id="loginView" class="fixed inset-0 w-full h-full z-50">
+        <div class="bg-login-image"></div>
+        <div class="bg-login-overlay"></div>
+        <div id="loginCardWrapper" class="fixed w-full max-w-[clamp(300px,90vw,600px)] px-3 sm:px-6 z-20">
+            <div class="login-card p-4 sm:p-6 md:p-10 w-full relative overflow-hidden rounded-2xl">
+                <div class="text-center mb-4 sm:mb-6 md:mb-8">
+                    <div class="inline-flex items-center justify-center mb-2 sm:mb-3 md:mb-4 relative">
+                        <img id="loginLogo" src="https://iili.io/B5MMKiX.png" alt="Logo Instansi"
+                            class="w-[clamp(60px,15vw,100px)] h-[clamp(60px,15vw,100px)] object-contain logo-blend"
+                            onerror="this.style.display='none'; document.getElementById('loginLogoSvg').classList.remove('hidden');">
+                        <svg id="loginLogoSvg"
+                            class="w-[clamp(60px,15vw,100px)] h-[clamp(60px,15vw,100px)] hidden drop-shadow-2xl"
+                            viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="50,5 92,36 76,86 24,86 8,36" fill="#1e3a8a" stroke="#fbbf24"
+                                stroke-width="3.5" stroke-linejoin="round" />
+                            <polygon points="50,9 88,38 73,82 27,82 12,38" fill="#0284c7" stroke="#ffffff"
+                                stroke-width="1" stroke-linejoin="round" />
+                            <polygon points="50,14 53,23 62,23 55,29 57,38 50,32 43,38 45,29 38,23 47,23"
+                                fill="#ffffff" />
+                            <text x="50" y="79" fill="#1e3a8a" font-size="5" font-weight="bold"
+                                text-anchor="middle">KUNINGAN</text>
+                        </svg>
+                    </div>
+                    <h1 id="loginTitle" class="text-[clamp(18px,4vw,26px)] font-bold text-white tracking-wide">
+                        Pilkasis SMANDA</h1>
+                    <p class="text-[clamp(10px,2vw,14px)] text-slate-300 mt-1 sm:mt-2 px-1">
+                        Masuk menggunakan NIS / NIP / Kode dan Password<br>Yang ada pada Kartu Pemilih
+                    </p>
+                </div>
+                <form id="loginForm" autocomplete="off">
+                    <div id="loginStatusMsg"
+                        class="hidden mb-3 sm:mb-4 p-2 sm:p-3 rounded-xl text-[clamp(10px,2vw,13px)] text-left flex items-start gap-2 border">
+                        <i id="loginStatusIcon" class="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
+                        <span id="loginStatusText" class="line-clamp-3">Pesan status disini.</span>
+                    </div>
+                    <div class="mb-3 sm:mb-4 relative">
+                        <label
+                            class="block text-[clamp(9px,1.5vw,11px)] font-semibold text-slate-300 uppercase tracking-wider mb-2 ml-1">ID
+                            Pemilih</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none"><i
+                                    class="fas fa-user text-slate-400 text-[clamp(12px,2vw,16px)]"></i></div>
+                            <input type="text" id="voterLoginId" name="voter-login-id"
+                                class="glass-input w-full pl-8 sm:pl-11 pr-4 py-2 sm:py-2.5 md:py-3 rounded-xl text-[clamp(12px,2vw,16px)]"
+                                placeholder="Masukkan ID" required autocomplete="off" autocapitalize="off"
+                                spellcheck="false">
+                        </div>
+                    </div>
+                    <div class="mb-4 sm:mb-5 md:mb-6 relative">
+                        <label
+                            class="block text-[clamp(9px,1.5vw,11px)] font-semibold text-slate-300 uppercase tracking-wider mb-2 ml-1">Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none"><i
+                                    class="fas fa-lock text-slate-400 text-[clamp(12px,2vw,16px)]"></i></div>
+                            <input type="password" id="voterLoginPass" name="voter-login-pass"
+                                class="glass-input w-full pl-8 sm:pl-11 pr-10 sm:pr-12 py-2 sm:py-2.5 md:py-3 rounded-xl text-[clamp(12px,2vw,16px)]"
+                                placeholder="Masukkan Password" required autocomplete="off">
+                            <button type="button" id="togglePasswordBtn"
+                                class="absolute inset-y-0 right-0 pr-2 sm:pr-4 flex items-center text-slate-400 hover:text-white focus:outline-none">
+                                <i class="fas fa-eye text-[clamp(12px,2vw,16px)]" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" id="submitBtn"
+                        class="btn-primary w-full text-white text-[clamp(11px,2vw,15px)] font-bold py-2.5 sm:py-3 md:py-3.5 px-4 rounded-xl flex justify-center items-center gap-2 mt-3 sm:mt-4 active:scale-95 transition-transform">
+                        <span id="btnText">Masuk</span>
+                        <i class="fas fa-arrow-right text-[clamp(11px,2vw,15px)]" id="btnIcon"></i>
+                        <svg id="loadingSpinner" class="animate-spin -ml-1 mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white hidden"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+            <div
+                class="text-center mt-4 sm:mt-6 md:mt-8 text-slate-400 text-[clamp(8px,1.5vw,11px)] font-medium tracking-widest">
+                &copy; 2026 SMAN 2 Kuningan | Developed by arnnon</div>
+        </div>
+    </div>
+    <script>
+        (function applyLoginBackgroundEarly() {
+            try {
+                var early = window.__PILKASIS_EARLY || {};
+                var fallbackBg = (typeof DEFAULT_SYSTEM_SETTINGS !== 'undefined' ? DEFAULT_SYSTEM_SETTINGS.loginBg : 'https://fawclsxyvnwkmmuddhzi.supabase.co/storage/v1/object/public/pilkasis_smanda/settings/bg_OKB1C2POHO.jpg');
+                if (typeof applyPilkasisLoginBackground === 'function') {
+                    applyPilkasisLoginBackground(early.bg || fallbackBg);
+                }
+            } catch (e) { }
+        })();
+    </script>
+
+    <div id="voterView" class="hidden fixed inset-0 w-full h-full z-50 overflow-hidden">
+
+        <div class="bg-login-image"></div>
+        <div class="bg-login-overlay"></div>
+
+        <div
+            class="absolute bg-blue-500 w-64 h-64 rounded-full blur-3xl opacity-20 top-[-10%] left-[-10%] pointer-events-none">
+        </div>
+        <div
+            class="absolute bg-purple-500 w-72 h-72 rounded-full blur-3xl opacity-20 bottom-[-10%] right-[-10%] pointer-events-none">
+        </div>
+        <div
+            class="absolute bg-indigo-500 w-48 h-48 rounded-full blur-3xl opacity-20 top-[40%] left-[60%] pointer-events-none">
+        </div>
+
+        <div class="relative z-10 w-full flex flex-col justify-center items-center p-4 sm:p-6 h-full">
+
+            <div
+                class="w-full flex justify-between items-start gap-2 sm:gap-3 mb-4 sm:mb-6 flex-none voter-page-header">
+                <div class="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
+                    <img id="voterHeaderLogo" src="https://iili.io/B5MMKiX.png" alt="Logo"
+                        class="w-9 h-9 sm:w-12 sm:h-12 object-contain logo-blend flex-shrink-0" />
+                    <div class="min-w-0 flex-1 voter-header-school-wrap">
+                        <h2 class="text-white font-bold text-lg sm:text-xl drop-shadow-md leading-tight"
+                            id="voterHeaderSchool">SMAN 2
+                            Kuningan</h2>
+                        <p id="voterHeaderSubtitle" class="text-slate-300 text-[10px] sm:text-xs">Portal Pemilihan
+                            Pilkasis</p>
+                    </div>
+                </div>
+                <div class="text-right flex flex-col items-end flex-shrink-0">
+                    <span
+                        class="px-3 py-1 bg-white/10 border border-white/20 text-white rounded-full text-xs font-semibold mb-1 shadow-inner backdrop-blur-md">
+                        <i class="fas fa-user text-[10px] mr-1"></i> <span id="voterActiveName">Nama Pemilih</span>
+                    </span>
+                    <button onclick="logoutVoter()"
+                        class="text-rose-400 hover:text-rose-300 text-[10px] sm:text-xs font-semibold transition-colors">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Keluar
+                    </button>
+                </div>
+            </div>
+
+            <div
+                class="animated-border-wrapper shadow-2xl w-full rounded-2xl flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div class="animated-border-inner p-4 sm:p-6 lg:p-8 w-full h-full flex flex-col">
+
+                    <div id="wizardContent"
+                        class="flex-1 overflow-y-auto custom-scroll flex flex-col items-center pr-2 w-full">
+
+                    </div>
+
+                    <div class="mt-4 flex-none w-full flex flex-col" id="wizardActionButtons">
+                        <div class="w-full h-1.5 bg-white/10 overflow-hidden">
+                            <div id="wizardProgress"
+                                class="h-full bg-gradient-to-r from-sky-400 to-blue-500 transition-all duration-500"
+                                style="width: 0%"></div>
+                        </div>
+                        <div class="pt-3 w-full flex items-center justify-between gap-1 sm:gap-4">
+                            <button id="wizardBackBtn" onclick="wizardPrevStep()"
+                                class="px-3 sm:px-5 py-2 rounded-lg font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-colors invisible flex-none">
+                                <i class="fas fa-arrow-left mr-1 sm:mr-2"></i><span>Kembali</span>
+                            </button>
+
+                            <div class="voting-countdown-wrap flex-1 min-w-0 px-2">
+                                <div id="votingCountdownMobile" class="voting-countdown-mobile">
+                                    <span class="voting-countdown-label">Sisa Waktu :</span>
+                                    <div class="voting-countdown-time-row">
+                                        <span class="voting-countdown-icon" aria-hidden="true">⏰</span>
+                                        <div id="votingCountdown" class="voting-countdown-time text-amber-300"
+                                            aria-live="polite">05:00</div>
+                                    </div>
+                                </div>
+                                <div id="votingCountdownDesktop" class="voting-countdown-desktop" aria-live="polite">
+                                    <div class="voting-countdown-desktop-time-wrap">
+                                        <span class="voting-countdown-label voting-countdown-label--inline">Sisa Waktu
+                                            :</span>
+                                        <span class="voting-countdown-icon" aria-hidden="true">⏰</span>
+                                        <div id="votingCountdownDesktopTime"
+                                            class="voting-countdown-desktop-time text-amber-300">05:00</div>
+                                    </div>
+                                    <div class="voting-countdown-marquee">
+                                        <div class="voting-countdown-marquee-track">
+                                            <span class="voting-countdown-marquee-text">Selesaikan semua pilihan sebelum
+                                                waktu habis, lalu kirim suara Anda.</span>
+                                            <span class="voting-countdown-marquee-text" aria-hidden="true">Selesaikan
+                                                semua pilihan sebelum waktu habis, lalu kirim suara Anda.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="wizardNextBtn" onclick="wizardNextStep()"
+                                class="px-3 sm:px-5 py-2 rounded-lg font-bold bg-sky-600 hover:bg-sky-500 text-white transition-colors flex items-center gap-1 sm:gap-2 flex-none">
+                                Lanjut <i class="fas fa-arrow-right text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="voteSubmitOverlay"
+        class="vote-submit-overlay fixed inset-0 z-[10000] hidden flex flex-col items-center justify-center p-6">
+        <div class="vote-submit-panel text-center">
+            <div class="vote-submit-spinner mx-auto mb-5" aria-hidden="true"></div>
+            <p class="text-white text-lg font-bold mb-1">Mengirim Suara Anda</p>
+            <p class="text-slate-400 text-sm mb-5">Mohon tunggu, jangan tutup halaman ini...</p>
+            <div class="vote-submit-progress-track">
+                <div class="vote-submit-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="customModal" class="modal-overlay fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
+        <div id="customModalPanel"
+            class="modal-content voter-modal-panel w-full bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="voter-modal-inner p-5 sm:p-6">
+                <h3 id="customModalTitle" class="text-lg font-bold text-white mb-3"></h3>
+                <div id="customModalBody" class="text-slate-300 text-sm mb-5"></div>
+                <div class="flex gap-3 justify-end">
+                    <button id="modalBtnCancel"
+                        class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 text-sm font-semibold transition-all">Batal</button>
+                    <button id="modalBtnConfirm"
+                        class="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold transition-all">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="visiMisiModal"
+        class="modal-overlay fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 md:p-10">
+        <div
+            class="animated-border-wrapper shadow-2xl w-full h-full max-h-[90vh] md:max-w-4xl rounded-2xl modal-content flex flex-col">
+            <div
+                class="animated-border-inner p-5 sm:p-8 w-full h-full flex flex-col bg-slate-900/95 backdrop-blur-xl relative">
+                <div class="flex justify-between items-center mb-6 flex-none border-b border-white/10 pb-4">
+                    <h3 class="text-xl sm:text-2xl lg:text-3xl font-black text-white" id="visiMisiModalTitle">Visi &amp;
+                        Misi</h3>
+                    <button onclick="document.getElementById('visiMisiModal').classList.remove('active')"
+                        class="text-slate-400 hover:text-white hover:bg-white/10 w-10 h-10 rounded-full flex items-center justify-center transition-all">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scroll pr-2 text-left" id="visiMisiModalBody">
+
+                </div>
+                <div class="mt-6 pt-4 border-t border-white/10 flex justify-end flex-none">
+                    <button onclick="document.getElementById('visiMisiModal').classList.remove('active')"
+                        class="px-8 py-3 rounded-xl font-bold bg-sky-600 hover:bg-sky-500 text-white transition-all shadow-lg hover:shadow-sky-500/30">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        const UI = {
+            viewLogin: document.getElementById('loginView'),
+            form: document.getElementById('loginForm'),
+            userInput: document.getElementById('voterLoginId'),
+            passInput: document.getElementById('voterLoginPass'),
+            btnSub: document.getElementById('submitBtn'),
+            btnTxt: document.getElementById('btnText'),
+            btnIco: document.getElementById('btnIcon'),
+            spin: document.getElementById('loadingSpinner'),
+            mod: document.getElementById('customModal'),
+            mTitle: document.getElementById('customModalTitle'),
+            mBody: document.getElementById('customModalBody'),
+            mCancel: document.getElementById('modalBtnCancel'),
+            mConfirm: document.getElementById('modalBtnConfirm'),
+            loginStatus: document.getElementById('loginStatusMsg'),
+            loginStatusTxt: document.getElementById('loginStatusText'),
+            loginStatusIco: document.getElementById('loginStatusIcon')
+        };
+
+        (function prefillLoginFromQrLink() {
+            try {
+                if (UI.userInput) UI.userInput.value = '';
+                if (UI.passInput) UI.passInput.value = '';
+
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('src') !== 'qr') return;
+
+                window.pilkasisFromQr = true;
+
+                const voterId = (params.get('id') || '').trim();
+                const voterPass = (params.get('p') || '').trim();
+                if (!voterId && !voterPass) return;
+
+                if (voterId && UI.userInput) UI.userInput.value = voterId;
+                if (voterPass && UI.passInput) UI.passInput.value = voterPass;
+
+                const cleanUrl = window.location.pathname + window.location.hash;
+                history.replaceState(null, '', cleanUrl || './');
+
+                setTimeout(() => {
+                    if (UI.loginStatus && UI.loginStatusTxt) {
+                        UI.loginStatus.classList.remove('hidden', 'border-red-500/50', 'bg-red-900/30', 'text-red-300');
+                        UI.loginStatus.classList.add('border-green-500/50', 'bg-green-900/30', 'text-green-300');
+                        if (UI.loginStatusIco) UI.loginStatusIco.className = 'fas fa-qrcode mt-0.5';
+                        UI.loginStatusTxt.textContent = voterId && voterPass
+                            ? 'Data dari QR kartu siap. Ketuk Masuk untuk memulai.'
+                            : 'ID dari QR kartu terisi. Lengkapi password lalu ketuk Masuk.';
+                    }
+                    if (voterId && voterPass && UI.btnSub) {
+                        UI.btnSub.focus();
+                    } else if (voterId && UI.passInput) {
+                        UI.passInput.focus();
+                    }
+                }, 0);
+            } catch (e) {
+                console.warn('Gagal membaca parameter QR login:', e);
+            }
+        })();
+
+        let modalCb = null;
+        function closeVoterModal() {
+            UI.mod.classList.remove('active');
+            const panel = document.getElementById('customModalPanel');
+            if (panel) panel.classList.remove('modal-booth-entry');
+            modalCb = null;
+        }
+        window.closeVoterModal = closeVoterModal;
+        window.getPilkasisModalCallback = function () { return modalCb; };
+        function showModal(title, body, showCancel, btnText, callback, options) {
+            const panel = document.getElementById('customModalPanel');
+            if (panel) {
+                panel.classList.toggle('modal-booth-entry', !!(options && options.boothEntry));
+            }
+            UI.mTitle.innerHTML = title; UI.mBody.innerHTML = body; UI.mConfirm.textContent = btnText || 'OK';
+            UI.mCancel.style.display = showCancel ? 'block' : 'none'; modalCb = callback;
+            const fs = document.fullscreenElement
+                || document.webkitFullscreenElement
+                || document.msFullscreenElement
+                || document.mozFullScreenElement;
+            if (fs && UI.mod && !fs.contains(UI.mod)) fs.appendChild(UI.mod);
+            UI.mod.classList.add('active');
+        }
+        UI.mCancel.onclick = () => { closeVoterModal(); };
+
+        UI.mConfirm.onclick = async () => {
+            const cb = modalCb;
+            if (typeof clearLoginReadyModalGuard === 'function') clearLoginReadyModalGuard();
+            if (!cb) {
+                closeVoterModal();
+                return;
+            }
+            try {
+                await cb();
+            } catch (err) {
+                console.error('Modal confirm error:', err);
+            } finally {
+                closeVoterModal();
+            }
+        };
+        function setLoginStatus(msg, isOk) {
+            const el = UI.loginStatus; if (!el) return;
+            el.classList.remove('hidden', 'border-green-500/50', 'bg-green-900/30', 'text-green-300', 'border-red-500/50', 'bg-red-900/30', 'text-red-300');
+            if (isOk) { el.classList.add('border-green-500/50', 'bg-green-900/30', 'text-green-300'); UI.loginStatusIco.className = 'fas fa-check-circle mt-0.5'; }
+            else { el.classList.add('border-red-500/50', 'bg-red-900/30', 'text-red-300'); UI.loginStatusIco.className = 'fas fa-exclamation-circle mt-0.5'; }
+            UI.loginStatusTxt.textContent = msg;
+        }
+        function resetBtn() {
+            UI.btnSub.disabled = false; UI.btnSub.classList.remove('opacity-80', 'cursor-not-allowed');
+            UI.btnTxt.textContent = 'Masuk'; UI.btnIco.classList.remove('hidden'); UI.spin.classList.add('hidden');
+        }
+        function applyLoginBackground(url) {
+            applyPilkasisLoginBackground(url);
+        }
+        function applyLogoImage(url) {
+            if (!url) return;
+            ['loginLogo', 'voterHeaderLogo'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.src !== url) el.src = url;
+            });
+            const faviconEl = document.getElementById('appFavicon');
+            if (faviconEl && faviconEl.href !== url) faviconEl.href = url;
+        }
+
+        (async function () {
+            const early = window.__PILKASIS_EARLY || {};
+            const storedBg = AppStorage.get('ep_login_bg');
+            const normalizedStoredBg = normalizePilkasisAssetUrl(storedBg, DEFAULT_SYSTEM_SETTINGS.loginBg);
+            if (storedBg && storedBg !== normalizedStoredBg) {
+                AppStorage.set('ep_login_bg', normalizedStoredBg);
+            }
+
+            const initialName = AppStorage.get('ep_sh_name') || DEFAULT_SYSTEM_SETTINGS.schoolName;
+            const schoolEl = document.getElementById('voterHeaderSchool');
+            if (schoolEl) schoolEl.textContent = initialName;
+
+            const initialExam = AppStorage.get('ep_ex_title') || DEFAULT_SYSTEM_SETTINGS.examTitle;
+            const loginTitleEl = document.getElementById('loginTitle');
+            if (loginTitleEl) loginTitleEl.textContent = initialExam;
+            const subtitleEl = document.getElementById('voterHeaderSubtitle');
+            if (subtitleEl) subtitleEl.textContent = initialExam;
+
+            const initialBgId = normalizedStoredBg || DEFAULT_SYSTEM_SETTINGS.loginBg;
+            const initialLogoId = AppStorage.get('ep_sh_logo') || DEFAULT_SYSTEM_SETTINGS.schoolLogo;
+            applyLoginBackground(early.bg || resolveLocalAssetUrl(initialBgId, DEFAULT_SYSTEM_SETTINGS.loginBg));
+            applyLogoImage(early.logo || resolveLocalAssetUrl(initialLogoId, DEFAULT_SYSTEM_SETTINGS.schoolLogo));
+
+            async function syncBootConfiguration() {
+                try {
+                    const { data: rows, error } = await db
+                        .from('pengaturan')
+                        .select(DB_SELECT.PENGATURAN_BOOT)
+                        .in('id', ['konfigurasi_aplikasi', LOGIN_QUEUE_SETTINGS_ID, VOTING_BOOTH_DURATION_SETTINGS_ID, VOTING_WAIT_SETTINGS_ID]);
+                    if (error || !Array.isArray(rows)) return;
+
+                    const appData = rows.find(r => r.id === 'konfigurasi_aplikasi');
+                    const queueData = rows.find(r => r.id === LOGIN_QUEUE_SETTINGS_ID);
+                    const boothDurationData = rows.find(r => r.id === VOTING_BOOTH_DURATION_SETTINGS_ID);
+                    const waitTimeoutData = rows.find(r => r.id === VOTING_WAIT_SETTINGS_ID);
+
+                    if (appData) {
+                        const examChanged = appData.exam_title !== AppStorage.get('ep_ex_title');
+                        const nameChanged = appData.school_name !== AppStorage.get('ep_sh_name');
+                        const bgChanged = appData.login_bg !== AppStorage.get('ep_login_bg');
+                        const logoChanged = appData.school_logo !== AppStorage.get('ep_sh_logo');
+
+                        if (appData.school_name) AppStorage.set('ep_sh_name', appData.school_name);
+                        if (appData.exam_title) AppStorage.set('ep_ex_title', appData.exam_title);
+                        if (appData.school_logo) AppStorage.set('ep_sh_logo', appData.school_logo);
+                        if (appData.login_bg) AppStorage.set('ep_login_bg', normalizePilkasisAssetUrl(appData.login_bg, DEFAULT_SYSTEM_SETTINGS.loginBg));
+
+                        if (nameChanged && appData.school_name) {
+                            const schoolEl = document.getElementById('voterHeaderSchool');
+                            if (schoolEl) schoolEl.textContent = appData.school_name;
+                        }
+                        if (examChanged && appData.exam_title) {
+                            const loginTitleEl = document.getElementById('loginTitle');
+                            if (loginTitleEl) loginTitleEl.textContent = appData.exam_title;
+                            const subtitleEl = document.getElementById('voterHeaderSubtitle');
+                            if (subtitleEl) {
+                                subtitleEl.textContent = appData.exam_title;
+                                subtitleEl.setAttribute('data-fit-text', appData.exam_title);
+                                if (typeof isMobilePortraitView === 'function' && isMobilePortraitView()) {
+                                    if (typeof fitElectionTitleToContainer === 'function') {
+                                        fitElectionTitleToContainer(subtitleEl);
+                                    }
+                                }
+                            }
+                        }
+                        if (bgChanged && appData.login_bg) {
+                            const bgUrl = await resolveImage(normalizePilkasisAssetUrl(appData.login_bg, DEFAULT_SYSTEM_SETTINGS.loginBg));
+                            if (bgUrl) applyLoginBackground(bgUrl);
+                        }
+                        if (logoChanged && appData.school_logo) {
+                            const logoUrl = await resolveImage(appData.school_logo);
+                            if (logoUrl) applyLogoImage(logoUrl);
+                        }
+                    }
+
+                    if (queueData && (queueData.mode === 'free' || queueData.mode === 'pro')) {
+                        localStorage.setItem(LOGIN_QUEUE_PROFILE_KEY, queueData.mode);
+                    } else {
+                        localStorage.setItem(LOGIN_QUEUE_PROFILE_KEY, 'free');
+                    }
+
+                    const boothDuration = Math.max(1, Math.min(60, Number(boothDurationData && boothDurationData.mode) || 5));
+                    const waitTimeout = Math.max(1, Math.min(60, Number(waitTimeoutData && waitTimeoutData.mode) || 15));
+                    localStorage.setItem(VOTING_BOOTH_DURATION_KEY, String(boothDuration));
+                    localStorage.setItem(VOTING_WAIT_TIMEOUT_KEY, String(waitTimeout));
+                } catch (err) {
+                    console.warn("Gagal menyinkronkan konfigurasi cloud di index:", err);
+                }
+            }
+
+            syncBootConfiguration();
+            const bootDelayMs = 800 + Math.floor(Math.random() * 4200);
+            setTimeout(syncBootConfiguration, bootDelayMs);
+        })();
+
+        (function () {
+            const loginCardWrapper = document.getElementById('loginCardWrapper');
+            const loginView = document.getElementById('loginView');
+            const inputs = [document.getElementById('voterLoginId'), document.getElementById('voterLoginPass')].filter(Boolean);
+            const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+            if (!loginCardWrapper || inputs.length === 0) return;
+
+            let isRaised = false;
+            let hasNudgeState = false;
+            let blurTimer = null;
+            let suppressPopstate = false;
+            let skipBlurRecenter = false;
+
+            function isLoginVisible() {
+                return !!(loginView && !loginView.classList.contains('hidden'));
+            }
+
+            function isMobileLogin() {
+                return window.innerWidth < 768;
+            }
+
+            function setRaised(raised) {
+                isRaised = raised;
+                loginCardWrapper.classList.toggle('login-form-raised', raised);
+            }
+
+            function blurInputs() {
+                inputs.forEach(input => {
+                    try { input.blur(); } catch (e) { }
+                });
+            }
+
+            function ensureNudgeState() {
+                if (hasNudgeState) return;
+                try {
+                    history.pushState({ pilkasisLoginNudge: true }, '');
+                    hasNudgeState = true;
+                } catch (e) {
+                    hasNudgeState = false;
+                }
+            }
+
+            function consumeNudgeState() {
+                if (!hasNudgeState) return;
+                hasNudgeState = false;
+                if (!(history.state && history.state.pilkasisLoginNudge)) return;
+                suppressPopstate = true;
+                try {
+                    history.back();
+                } catch (e) { }
+                setTimeout(() => { suppressPopstate = false; }, 50);
+            }
+
+            function clearNudgeStateSilent() {
+                hasNudgeState = false;
+                if (history.state && history.state.pilkasisLoginNudge) {
+                    try {
+                        history.replaceState(null, '', window.location.href);
+                    } catch (e) { }
+                }
+            }
+
+            function raiseForm() {
+                if (!isMobileLogin() || !isLoginVisible()) return;
+                if (isRaised) return;
+                setRaised(true);
+                ensureNudgeState();
+            }
+
+            function recenterForm() {
+                setRaised(false);
+                blurInputs();
+            }
+
+            inputs.forEach(input => {
+                input.addEventListener('focus', () => {
+                    if (blurTimer) {
+                        clearTimeout(blurTimer);
+                        blurTimer = null;
+                    }
+                    raiseForm();
+                });
+
+                input.addEventListener('blur', () => {
+                    if (blurTimer) clearTimeout(blurTimer);
+                    blurTimer = setTimeout(() => {
+                        blurTimer = null;
+                        if (skipBlurRecenter) {
+                            skipBlurRecenter = false;
+                            return;
+                        }
+                        if (!isLoginVisible() || !isRaised) return;
+
+                        const active = document.activeElement;
+                        if (inputs.includes(active)) return;
+                        if (togglePasswordBtn && active === togglePasswordBtn) return;
+
+                        setRaised(false);
+                        if (hasNudgeState) {
+                            if (history.state && history.state.pilkasisLoginNudge) {
+                                consumeNudgeState();
+                            } else {
+                                hasNudgeState = false;
+                            }
+                        }
+                    }, 180);
+                });
+            });
+
+            if (togglePasswordBtn) {
+                togglePasswordBtn.addEventListener('pointerdown', () => {
+                    skipBlurRecenter = true;
+                });
+                togglePasswordBtn.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                });
+            }
+
+            window.addEventListener('popstate', () => {
+                if (suppressPopstate) return;
+
+                if (!isLoginVisible()) {
+                    hasNudgeState = false;
+                    setRaised(false);
+                    return;
+                }
+
+                if (document.getElementById('customModal')?.classList.contains('active')) {
+                    return;
+                }
+
+                const inputFocused = inputs.some(el => el === document.activeElement);
+                if (isRaised || hasNudgeState || inputFocused) {
+                    hasNudgeState = false;
+                    recenterForm();
+                }
+            });
+
+            window.clearPilkasisLoginNudge = function (options) {
+                if (blurTimer) {
+                    clearTimeout(blurTimer);
+                    blurTimer = null;
+                }
+                skipBlurRecenter = false;
+                setRaised(false);
+                if (options && options.silent) {
+                    clearNudgeStateSilent();
+                } else {
+                    consumeNudgeState();
+                }
+            };
+        })();
+    </script>
+    <script src="assets/js/auth.js"></script>
+
+    <div id="connectionErrorOverlay"
+        class="hidden fixed inset-0 z-[100000] bg-slate-950/95 flex items-center justify-center p-6 text-center">
+        <div class="max-w-md w-full bg-slate-900 border border-red-500/30 p-8 rounded-2xl shadow-2xl">
+            <div
+                class="w-16 h-16 bg-red-950/50 border border-red-500/50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500 text-2xl animate-pulse">
+                <i class="fas fa-wifi"></i>
+            </div>
+            <h2 class="text-white text-xl font-bold mb-3">Koneksi Gagal / Library Tidak Terisi</h2>
+            <p class="text-slate-400 text-sm mb-6 leading-relaxed">
+                Aplikasi gagal terhubung ke database atau library eksternal penting (Supabase/Tailwind) tidak berhasil
+                dimuat.
+                Pastikan perangkat Anda terhubung ke internet lalu muat ulang halaman ini.
+            </p>
+            <button onclick="window.location.reload()"
+                class="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/30 transition-all active:scale-95">
+                Muat Ulang Halaman
+            </button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof db === 'undefined' || db === null || typeof tailwind === 'undefined') {
+                var overlay = document.getElementById('connectionErrorOverlay');
+                if (overlay) {
+                    overlay.classList.remove('hidden');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
