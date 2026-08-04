@@ -928,7 +928,7 @@ async function downloadVoterCardsPdf() {
             doc.setFont('helvetica', 'italic');
             doc.setTextColor(120, 120, 120);
             doc.setFontSize(6.5);
-            doc.text('Web : smandakng.github.io/pilkasis_smanda', posX + kartuLebar / 2, posY + kartuTinggi - 7, { align: 'center' });
+            doc.text('Web : smandaku.github.io/pilkasis', posX + kartuLebar / 2, posY + kartuTinggi - 7, { align: 'center' });
             doc.setFillColor(34, 102, 170);
             doc.roundedRect(posX, posY + kartuTinggi - 3, kartuLebar, 3, 3, 3, 'F');
             doc.rect(posX, posY + kartuTinggi - 3, kartuLebar, 1.5, 'F');
